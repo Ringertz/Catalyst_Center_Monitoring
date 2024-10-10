@@ -1,0 +1,11 @@
+Notes:
+
+To monitor and analyze the active or inactive time on a switch port, you can utilize the Cisco DNA Center API’s interface statistics for each port. You’d want to gather metrics like traffic input and output over the last month to determine whether a port has been actively used.
+
+In Cisco DNA Center, a specific endpoint for monitoring historical statistics is available, which can return metrics like bytes or packets over time. You may use these statistics to estimate usage and create a summary of active vs. inactive periods.
+
+Here’s how you can add a function to your existing code that:
+
+	1.	Retrieves monthly interface statistics (if available).
+	2.	Calculates the port’s active time based on input/output values.
+	3.	Displays the information for each interface.

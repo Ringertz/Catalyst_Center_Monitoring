@@ -3,19 +3,15 @@ from requests.auth import HTTPBasicAuth
 import urllib3
 import matplotlib.pyplot as plt
 from tabulate import tabulate
-from datetime import datetime, timedelta
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Replace these with your own Cisco DNA Center credentials and URL
+#fråga teamet om detta. kan man få testa här, sen att återskapa ett error. 
 USERNAME = 'devnetuser'
 PASSWORD = 'Cisco123!'
 BASE_URL = 'https://sandboxdnac2.cisco.com'
 
 def get_token():
-    """
-    Authenticates with Cisco DNA Center and retrieves an authentication token.
-    """
     url = f"{BASE_URL}/dna/system/api/v1/auth/token"
     headers = {
         "Content-Type": "application/json",
@@ -23,13 +19,9 @@ def get_token():
     }
     response = requests.post(url, auth=HTTPBasicAuth(USERNAME, PASSWORD), headers=headers, verify=False)
     response.raise_for_status()
-    token = response.json()["Token"]
-    return token
+    return response.json()["Token"]
 
 def get_device_id(device_name, token):
-    """
-    Fetches the device ID based on the device name.
-    """
     url = f"{BASE_URL}/dna/intent/api/v1/network-device"
     headers = {
         "Content-Type": "application/json",
@@ -37,34 +29,13 @@ def get_device_id(device_name, token):
     }
     response = requests.get(url, headers=headers, verify=False)
     response.raise_for_status()
-
     devices = response.json()["response"]
     for device in devices:
         if device["hostname"] == device_name:
             return device["id"]
     return None
 
-#new function, gets all the devices instead of just one hehe. 
-def get_all_devices(token):
-    """
-    Fetches all device IDs and hostnames in the DNA Center.
-    """
-    url = f"{BASE_URL}/dna/intent/api/v1/network-device"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Auth-Token": token
-    }
-    response = requests.get(url, headers=headers, verify=False)
-    response.raise_for_status()
-
-    devices = response.json()["response"]
-    return [(device["id"], device["hostname"]) for device in devices]
-
-#jobbar här.
 def get_interface_stats(device_id, token):
-    """
-    Fetches interface details for a given device ID.
-    """
     url = f"{BASE_URL}/dna/intent/api/v1/interface/network-device/{device_id}"
     headers = {
         "Content-Type": "application/json",
@@ -72,9 +43,7 @@ def get_interface_stats(device_id, token):
     }
     response = requests.get(url, headers=headers, verify=False)
     response.raise_for_status()
-
-    interfaces = response.json()["response"]
-    return interfaces
+    return response.json()["response"]
 
 def get_interface_errors(device_id, token):
     url = f"{BASE_URL}/dna/intent/api/v1/interface/network-device/{device_id}/errors"
@@ -86,14 +55,11 @@ def get_interface_errors(device_id, token):
     
     if response.status_code == 200:
         return response.json()["response"]
-    #return response.json().get("response", [])
     else:
         print("Failed to retrieve interface error statistics.")
         response.raise_for_status()
 
 def display_top_crc_errors(errors_data, top_n=10):
-    # Filter out interfaces with CRC errors
-    # Does not seem to work because cRc is not up, however the problem seems to come when I can not g
     crc_errors = [
         {
             "portName": interface["portName"],
@@ -103,9 +69,7 @@ def display_top_crc_errors(errors_data, top_n=10):
         if interface.get("crcErrors", 0) > 0
     ]
     
-    # Sort interfaces by CRC error count in descending order
     crc_errors_sorted = sorted(crc_errors, key=lambda x: x["crcErrors"], reverse=True)
-    
     print(f"\nTop {top_n} Interfaces with CRC Errors:")
     for interface in crc_errors_sorted[:top_n]:
         print(f"Interface {interface['portName']}: {interface['crcErrors']} CRC errors")
@@ -124,6 +88,7 @@ def plot_crc_errors(port_names, crc_counts):
     plt.xticks(rotation=45)
     plt.tight_layout()
     plt.show()
+
 def print_interfaces_table(interfaces):
     table = []
     headers = ["Port Name", "Status", "Admin Status", "MAC Address", "Speed", "Duplex", "MTU", "VLAN ID", "IP Address", "IP Mask"]
@@ -143,42 +108,11 @@ def print_interfaces_table(interfaces):
         table.append(row)
     print(tabulate(table, headers, tablefmt="grid"))
 
-
-
-def get_interface_usage(device_id, interface_id, token):
-    #test of fake data:
-
-    # Set the date range to the last 30 days
-    end_time = datetime.utcnow()
-    start_time = end_time - timedelta(days=30)    
-    url = f"{BASE_URL}/dna/intent/api/v1/interface/{interface_id}/statistics"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Auth-Token": token
-    }
-
-    params = {
-        "startTime": int(start_time.timestamp() * 1000),  # Convert to milliseconds
-        "endTime": int(end_time.timestamp() * 1000)
-    }
-    
-    response = requests.get(url, headers=headers, params=params, verify=False)
-    
-    if response.status_code == 200:
-        return response.json()["response"]
-    elif response.status_code == 404:
-        print(f"No usage data available for interface {interface_id}. It may be unsupported in the lab environment.")
-        return None
-    else:
-        print("Failed to retrieve interface usage statistics.")
-        return None
-
 def main():
-    device_name = "switch2.ciscotest.com"  # Update this as necessary
+    device_name = "switch2.ciscotest.com"
     token = get_token()
     print("Token fetched successfully.")
-
-
+    
     device_id = get_device_id(device_name, token)
     if device_id:
         print(f"Device ID for '{device_name}' found: {device_id}")
@@ -188,35 +122,16 @@ def main():
 
     try:
         interfaces = get_interface_stats(device_id, token)
-        print(f"Interfaces for device '{device_name}':")
-        
+        print("Interfaces for device:")
         print_interfaces_table(interfaces)
-        print("\n--- Interface Activity ---")
-
-        for interface in interfaces:
-            interface_id = interface.get("id")
-            port_name = interface.get("portName", "N/A")
-            if interface_id:
-                usage_data = get_interface_usage(device_id, interface_id, token)
-                
-                if usage_data:
-                    total_in_bytes = sum([entry["inBytes"] for entry in usage_data])
-                    total_out_bytes = sum([entry["outBytes"] for entry in usage_data])
-                    
-                    # Example threshold for active/inactive (e.g., 1 MB total over the month)
-                    threshold = 1 * 1024 * 1024  # 1 MB in bytes
-                    
-                    if total_in_bytes + total_out_bytes > threshold:
-                        print(f"Port {port_name}: Active with {total_in_bytes + total_out_bytes} bytes.")
-                    else:
-                        print(f"Port {port_name}: Inactive with {total_in_bytes + total_out_bytes} bytes.")
-                else:
-                    print(f"Could not retrieve usage data for port {port_name}")
-    
+        
+        errors_data = get_interface_errors(device_id, token)
+        port_names, crc_counts = display_top_crc_errors(errors_data)
+        
+        if port_names:
+            plot_crc_errors(port_names, crc_counts)
     except requests.exceptions.HTTPError as http_err:
         print(f"HTTP error occurred: {http_err}")
-        
+
 if __name__ == "__main__":
     main()
-
-    

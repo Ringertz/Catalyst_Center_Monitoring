@@ -1,0 +1,16 @@
+{{ myvar | ansible.utils.ipaddr }}
+
+
+ansible_default_ipv4: {
+    address: "192.168.0.11",
+    alias: "eth0",
+    broadcast: "192.168.0.255",
+    gateway: "192.168.0.1",
+    interface: "eth0",
+    macaddress: "fa:16:3e:c4:bd:89",
+    mtu: 1500,
+    netmask: "255.255.255.0",
+    network: "192.168.0.0",
+    type: "ether"
+}
+
