@@ -44,35 +44,6 @@ def get_device_id(device_name, token):
             return device["id"]
     return None
 
-def get_device_equipment(device_id, token):
-    """
-    Fetches equipment details for a specific device by ID.
-    """
-    url = f"{BASE_URL}/dna/intent/api/v1/network-device/{device_id}/equipment"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Auth-Token": token
-    }
-    
-    try:
-        response = requests.get(url, headers=headers, verify=False)
-        response.raise_for_status()
-        
-        # If request is successful, return the equipment details
-        equipment_details = response.json()["response"]
-        return equipment_details
-    
-    except requests.exceptions.HTTPError as http_err:
-        if response.status_code == 400:
-            print("This endpoint is not supported or lacks data in the sandbox environment.")
-            return None
-        else:
-            print(f"HTTP error occurred: {http_err}")
-            return None
-    except Exception as err:
-        print(f"An error occurred: {err}")
-        return None
-
 #new function, gets all the devices instead of just one hehe. 
 def get_all_devices(token):
     """
@@ -203,7 +174,6 @@ def get_interface_usage(device_id, interface_id, token):
         return None
 
 def main():
-   # device_name = "switch2.ciscotest.com"  # Update this as necessary
     token = get_token()
     print("Token fetched successfully.")
     
@@ -215,28 +185,9 @@ def main():
     for device_id, device_name in devices:
         print(f"\n--- Processing device '{device_name}' ---")
         try:
-            # Fetch and display interface details
             interfaces = get_interface_stats(device_id, token)
             print(f"Interfaces for device '{device_name}':")
             print_interfaces_table(interfaces)
-            
-            # Fetch and display equipment details
-            equipment_details = get_device_equipment(device_id, token)
-            if equipment_details:
-                print("\n--- Equipment Details ---")
-                for equipment in equipment_details:
-                    print(f"Name: {equipment.get('name', 'N/A')}")
-                    print(f"Type: {equipment.get('type', 'N/A')}")
-                    print(f"Serial Number: {equipment.get('serialNumber', 'N/A')}")
-                    print(f"Part Number: {equipment.get('partNumber', 'N/A')}")
-                    print(f"Module Type: {equipment.get('moduleType', 'N/A')}")
-                    print(f"Software Version: {equipment.get('softwareVersion', 'N/A')}")
-                    print(f"Hardware Version: {equipment.get('hardwareVersion', 'N/A')}")
-                    print(f"Position: {equipment.get('position', 'N/A')}")
-                    print(f"Operational State: {equipment.get('operationalState', 'N/A')}")
-                    print("-" * 40)
-            else:
-                print("No equipment details found.")
             
             # CRC error check and plot
             errors_data = get_interface_errors(device_id, token)
@@ -256,7 +207,6 @@ def main():
             print(f"HTTP error occurred: {http_err}")
         except Exception as err:
             print(f"An error occurred: {err}")
-
 if __name__ == "__main__":
     main()
 
